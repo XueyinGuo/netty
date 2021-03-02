@@ -3,7 +3,10 @@
 
 ## ------------Done--------------
 
-### 现完成 ServerBootStrap 和 BootStrap 启动流程
+### 1. ServerBootStrap 和 BootStrap 启动流程
+配图查看流程更清晰！
+
+https://blog.csdn.net/XueyinGuo/article/details/114295892
 
 ## ------------In Progress--------------
 
