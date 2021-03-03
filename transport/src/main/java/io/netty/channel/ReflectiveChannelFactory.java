@@ -47,12 +47,6 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
             * 构造 channelFactory
             * NioSocketChannel / NioServerSocketChannel
             * */
-            /*
-             * 1.注册关心事件，OP_ACCEPT
-             *      获取unsafe  这个unsafe 好像不是 JDK的 unsafe
-             *
-             * 2. 调用 ServerSocketChannel.socket()
-             * */
             return constructor.newInstance();
         } catch (Throwable t) {
             throw new ChannelException("Unable to create Channel from class " + constructor.getDeclaringClass(), t);

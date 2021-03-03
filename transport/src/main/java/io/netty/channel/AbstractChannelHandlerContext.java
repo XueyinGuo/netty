@@ -213,7 +213,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     static void invokeChannelActive(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeChannelActive();  /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） */
+            /* 1. 把服务端注册的感兴趣事件 0 改为 16（ACCEPT）
+             * 2. 客户端连接成功后也需要触发事件*/
+            next.invokeChannelActive();
         } else {
             executor.execute(new Runnable() {
                 @Override
@@ -227,9 +229,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelActive() {
         if (invokeHandler()) {
             try {
-                /*
-                * 把服务端注册的感兴趣事件 0 改为 16（ACCEPT）
-                *  */
+                /* 1. 把服务端注册的感兴趣事件 0 改为 16（ACCEPT）
+                 * 2. 客户端不做修改 */
                 ((ChannelInboundHandler) handler()).channelActive(this);
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
@@ -357,7 +358,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
-        invokeChannelRead(findContextInbound(MASK_CHANNEL_READ), msg);
+        invokeChannelRead(findContextInbound(MASK_CHANNEL_READ), msg);  /* 服务端接收连接 */
         return this;
     }
 
@@ -365,7 +366,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeChannelRead(m);
+            next.invokeChannelRead(m);  /* 服务端接收连接 */
         } else {
             executor.execute(new Runnable() {
                 @Override
@@ -379,7 +380,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeChannelRead(Object msg) {
         if (invokeHandler()) {
             try {
-                ((ChannelInboundHandler) handler()).channelRead(this, msg);
+                ((ChannelInboundHandler) handler()).channelRead(this, msg);  /* 服务端接收连接 */
             } catch (Throwable t) {
                 invokeExceptionCaught(t);
             }
@@ -533,6 +534,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_CONNECT);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
+            /* 进行连接操作 */
             next.invokeConnect(remoteAddress, localAddress, promise);
         } else {
             safeExecute(executor, new Runnable() {
@@ -548,6 +550,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         if (invokeHandler()) {
             try {
+                /* 连接远程 */
                 ((ChannelOutboundHandler) handler()).connect(this, remoteAddress, localAddress, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);

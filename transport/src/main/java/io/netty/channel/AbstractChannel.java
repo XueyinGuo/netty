@@ -281,7 +281,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public Channel read() {
-        pipeline.read();  /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） */
+        pipeline.read();  /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT），客户端不做修改 */
         return this;
     }
 
@@ -480,7 +480,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     * 【其中的 executor 是 ThreadPerTaskExecutor类型，所以最终跳转到 】
                     * 【ThreadPerTaskExecutor 中 去执行 execute 方法创建线程执行任务】
                     *
-                    * 当前的这个  register0 runnable 是要先放进队列的，因为此时连线程还没有，没办法执行任务
+                    * 当前的这个  register0 runnable 是要先放进队列的，因为此时连线程还没有，没办法执行任务， 线程创建在这个 execute 方法中
                     * */
                     eventLoop.execute(new Runnable() {
                         @Override
@@ -515,7 +515,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // user may already fire events through the pipeline in the ChannelFutureListener.
                 // TODO 上边说的是他妈什么意思，什么叫通过 “用户可能已经通过ChannelFutureListener中的管道触发事件”
                 pipeline.invokeHandlerAddedIfNeeded();
-                /* 继续往任务队列中加入任务，这个任务是绑定端口 */
+                /* 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered(); /* 触发 ChannelRegistered 事件，好像是把当前通道中所有的ChannelHandler执行一遍，从head开始一直往下 */
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
@@ -856,7 +856,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
-                doBeginRead();/* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） */
+                doBeginRead();/* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） ，客户端不做修改 */
             } catch (final Exception e) {
                 invokeLater(new Runnable() {
                     @Override
@@ -1012,7 +1012,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
          */
         protected final void safeSetSuccess(ChannelPromise promise) {
-            if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {  /*  trySuccess 继续往任务队列中加入任务，这个任务是绑定端口 */
+            /* trySuccess 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
+            if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
                 logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
             }
         }

@@ -83,7 +83,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public ChannelFuture register(Channel channel) {
         /*
         * 把每个 channel 和 当前这个 NioEventLoop
-        * 包装成 DefaultChannelPromise【其实就是 Future】
+        * 包装成 DefaultChannelPromise【其实就是 Future】 注册到多路复用器
         * */
         return register(new DefaultChannelPromise(channel, this));
     }

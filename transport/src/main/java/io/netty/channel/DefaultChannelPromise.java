@@ -81,7 +81,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
 
     @Override
     public boolean trySuccess() {
-        return trySuccess(null); /* 继续往任务队列中加入任务，这个任务是绑定端口 */
+        return trySuccess(null); /* 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
     }
 
     @Override

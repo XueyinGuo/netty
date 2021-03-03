@@ -851,7 +851,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         /*
          * 把执行任务加入到 EventLoop 的 taskQueue 中
          *
-         * task -> register0 -> runnable
+         * register0 任务加入
          * */
         addTask(task);
         if (!inEventLoop) {
@@ -1019,7 +1019,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 threadFactory.newThread(command).start();
              }
 
-         * 执行完这个之后队列中还有任务，就继续执行那个任务， 那个任务是 task -> register0 -> runnable
+         * 执行完这个之后队列中还有任务，就继续执行那个任务， 那个任务是 register0
          * */
         executor.execute(new Runnable() {
             @Override

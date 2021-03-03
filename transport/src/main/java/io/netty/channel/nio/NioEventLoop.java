@@ -443,7 +443,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         for (;;) {
             try {
                 int strategy;
-                try {
+                try {/* 线程刚刚进来的时候，没有可读可写可连接事件，因为现在通道初始化还没完成，需要先执行 register0 任务，此时 strategy = 0  */
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
                     case SelectStrategy.CONTINUE:
@@ -497,7 +497,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     /* server 有可以 accept 的事件 */
                 } else if (strategy > 0) {
                     final long ioStartTime = System.nanoTime();
-                    try {
+                    try { /* 开始处理可读可写时间 */
                         processSelectedKeys();
                     } finally {
                         // Ensure we always run tasks.
@@ -505,7 +505,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
                 } else {
-                    /* 从任务队列中取出所有的任务，执行 */
+                    /* 执行register0任务，先把自己绑定端口，注册到selector上 */
                     ranTasks = runAllTasks(0); // This will run the minimum number of tasks
                 }
 
@@ -587,7 +587,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void processSelectedKeys() {
         if (selectedKeys != null) {
-            processSelectedKeysOptimized();
+            processSelectedKeysOptimized(); /* 开始处理可读可写可连接事件 */
         } else {
             processSelectedKeysPlain(selector.selectedKeys());
         }
@@ -661,7 +661,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             final Object a = k.attachment();
 
             if (a instanceof AbstractNioChannel) {
-                processSelectedKey(k, (AbstractNioChannel) a);
+                processSelectedKey(k, (AbstractNioChannel) a); /* 开始处理可读可写可连接事件 */
             } else {
                 @SuppressWarnings("unchecked")
                 NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
@@ -712,7 +712,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int ops = k.interestOps();
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
-
+                /* 客户端完成连接时 读取数据 */
                 unsafe.finishConnect();
             }
 
@@ -725,7 +725,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                unsafe.read();
+                unsafe.read(); /* 服务端接收连接 */
             }
         } catch (CancelledKeyException ignored) {
             unsafe.close(unsafe.voidPromise());

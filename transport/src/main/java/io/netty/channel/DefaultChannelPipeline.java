@@ -893,7 +893,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        AbstractChannelHandlerContext.invokeChannelActive(head);  /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） */
+        /* 1. 把服务端注册的感兴趣事件 0 改为 16（ACCEPT）
+        * 2. 客户端连接成功后也需要触发事件*/
+        AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }
 
@@ -917,7 +919,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
-        AbstractChannelHandlerContext.invokeChannelRead(head, msg);
+        AbstractChannelHandlerContext.invokeChannelRead(head, msg);  /* 服务端接收连接 */
         return this;
     }
 
@@ -1102,7 +1104,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             // This Channel itself was registered.
             registered = true;
-
+            /*  pendingHandlerCallbackHead为 main函数中的 匿名内部类 ，给EventLoop中添加handler */
             pendingHandlerCallbackHead = this.pendingHandlerCallbackHead;
             // Null out so it can be GC'ed.
             this.pendingHandlerCallbackHead = null;
@@ -1124,7 +1126,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         PendingHandlerCallback task = added ? new PendingHandlerAddedTask(ctx) : new PendingHandlerRemovedTask(ctx);
         PendingHandlerCallback pending = pendingHandlerCallbackHead;
-        if (pending == null) {
+        if (pending == null) { /* 把main函数中的 匿名内部类赋值为 pendingHandlerCallbackHead，给EventLoop中添加handler */
             pendingHandlerCallbackHead = task;
         } else {
             // Find the tail of the linked-list.
@@ -1397,9 +1399,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
+            /* 1. 把服务端注册的感兴趣事件 0 改为 16（ACCEPT）
+             * 2. 客户端连接成功后也需要触发事件*/
             ctx.fireChannelActive();
-
-            readIfIsAutoRead();  /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） */
+            /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT），客户端不做修改 */
+            readIfIsAutoRead();
         }
 
         @Override
@@ -1409,7 +1413,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            ctx.fireChannelRead(msg);
+            ctx.fireChannelRead(msg);  /* 服务端接收连接 */
         }
 
         @Override
@@ -1421,7 +1425,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         private void readIfIsAutoRead() {
             if (channel.config().isAutoRead()) {
-                channel.read();  /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT） */
+                channel.read();  /* /* 把服务端注册的感兴趣事件 0 改为 16（ACCEPT），客户端不做修改  */
             }
         }
 

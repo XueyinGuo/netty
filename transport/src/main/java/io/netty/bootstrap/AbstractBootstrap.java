@@ -326,11 +326,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             * 服务端是 NioServerSocketChannel
             * 客户端是 NioSocketChannel
             *
-            *  1.注册关心事件，OP_ACCEPT
-            *         获取unsafe  这个unsafe 好像不是 JDK的 unsafe
-            *    2. 调用 ServerSocketChannel.socket()
+            *  1.服务端
+            *           channelFactory 为 NioServerSocketChannel 使用反射构造
+            *  2.客户端
+            *           channelFactory 为 NioSocketChannel  使用反射构造
             * */
             channel = channelFactory.newChannel();
+            /*
+             * 添加在 DiscardClient 那个内部类
+             * new ChannelInitializer<SocketChannel>() {}
+             * */
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {

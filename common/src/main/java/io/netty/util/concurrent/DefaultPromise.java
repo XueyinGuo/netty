@@ -101,7 +101,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public boolean trySuccess(V result) {
-        return setSuccess0(result); /* 继续往任务队列中加入任务，这个任务是绑定端口 */
+        return setSuccess0(result); /* 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
     }
 
     @Override
@@ -488,7 +488,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
                 threadLocals.setFutureListenerStackDepth(stackDepth + 1);
                 try {
-                    notifyListenersNow(); /* 继续往任务队列中加入任务，这个任务是绑定端口 */
+                    notifyListenersNow(); /* 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
                 } finally {
                     threadLocals.setFutureListenerStackDepth(stackDepth);
                 }
@@ -574,7 +574,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static void notifyListener0(Future future, GenericFutureListener l) {
-        try {   /* 继续往任务队列中加入任务，这个任务是绑定端口, */
+        try {   /* 继续往任务队列中加入任务，这个任务是绑定端口,这个方法会跳转到主线程的那个匿名内部类 */
             l.operationComplete(future);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
@@ -602,7 +602,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean setSuccess0(V result) {
-        return setValue0(result == null ? SUCCESS : result); /* 继续往任务队列中加入任务，这个任务是绑定端口 */
+        return setValue0(result == null ? SUCCESS : result); /* 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
     }
 
     private boolean setFailure0(Throwable cause) {
@@ -613,7 +613,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
             if (checkNotifyWaiters()) {
-                notifyListeners(); /* 继续往任务队列中加入任务，这个任务是绑定端口 */
+                notifyListeners(); /* 服务器端 继续往任务队列中加入任务，这个任务是绑定端口， 客户端是执行内部类提交发起连接任务 */
             }
             return true;
         }

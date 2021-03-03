@@ -4,11 +4,11 @@
 ## ------------Done--------------
 
 ### 1. ServerBootStrap 和 BootStrap 启动流程
-配图查看流程更清晰！
+### 2. 二者分别接收连接的过程
+#### [配图查看流程更清晰！](https://blog.csdn.net/XueyinGuo/article/details/114295892)
 
 
-https://blog.csdn.net/XueyinGuo/article/details/114295892
+
 
 ## ------------In Progress--------------
-
-###  server 接受请求之后的代码逻辑
+ByteBuf Channel

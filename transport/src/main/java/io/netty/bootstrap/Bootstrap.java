@@ -214,7 +214,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                     promise.setFailure(resolveFailureCause);
                 } else {
                     // Succeeded to resolve immediately; cached? (or did a blocking lookup)
-                    doConnect(resolveFuture.getNow(), localAddress, promise);
+                    doConnect(resolveFuture.getNow(), localAddress, promise); /* 进行连接操作 */
                 }
                 return promise;
             }
@@ -243,14 +243,16 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         final Channel channel = connectPromise.channel();
-        channel.eventLoop().execute(new Runnable() {
+        channel.eventLoop().execute(new Runnable() { /* 提交异步任务，准备连接 */
             @Override
             public void run() {
                 if (localAddress == null) {
+                    /* 线程启动之后在后来的for死循环不断取出任务，执行的时候，最终会执行这个任务 */
                     channel.connect(remoteAddress, connectPromise);
                 } else {
                     channel.connect(remoteAddress, localAddress, connectPromise);
                 }
+                /* TODO 这是什么监听器 */
                 connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
             }
         });
@@ -260,6 +262,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @SuppressWarnings("unchecked")
     void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
+        /*
+        * 添加在 DiscardClient 那个内部类
+        * new ChannelInitializer<SocketChannel>() {}
+        * */
         p.addLast(config.handler());
 
         setChannelOptions(channel, newOptionsArray(), logger);

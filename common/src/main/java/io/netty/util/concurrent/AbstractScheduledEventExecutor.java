@@ -75,7 +75,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     protected static long initialNanoTime() {
         return ScheduledFutureTask.initialNanoTime();
     }
-
+    /*
+    * 其实就是一个 Future 的变种
+    * JDK 中的 FutureTask 即时一个future，也是一个runnable
+    * 这里的 ScheduledFutureTask 是一个 先放入优先级队列，可以延缓执行的 task
+    * */
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
         if (scheduledTaskQueue == null) {
             scheduledTaskQueue = new DefaultPriorityQueue<ScheduledFutureTask<?>>(
@@ -174,7 +178,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         validateScheduled0(delay, unit);
 
-        return schedule(new ScheduledFutureTask<Void>(
+        return schedule(new ScheduledFutureTask<Void>( /* 把连接超时的runnable放入优先级队列，到了超时时间会自定执行 */
                 this,
                 command,
                 deadlineNanos(unit.toNanos(delay))));
@@ -253,7 +257,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     private <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
         if (inEventLoop()) {
-            scheduleFromEventLoop(task);
+            scheduleFromEventLoop(task); /* 放入优先级队列 */
         } else {
             final long deadlineNanos = task.deadlineNanos();
             // task will add itself to scheduled task queue when run if not expired
