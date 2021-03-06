@@ -48,6 +48,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
      * @param maxCapacity the max capacity of the underlying byte array
      */
     public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        /* 检查 maxCapacity 是否大于0 */
         super(maxCapacity);
 
         if (initialCapacity > maxCapacity) {
@@ -56,6 +57,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = checkNotNull(alloc, "alloc");
+        /* 新申请一个 initialCapacity的 字节数组 */
         setArray(allocateArray(initialCapacity));
         setIndex(0, 0);
     }
@@ -132,6 +134,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         }
         byte[] newArray = allocateArray(newCapacity);
         System.arraycopy(oldArray, 0, newArray, 0, bytesToCopy);
+        /* 更改引用为新数组 */
         setArray(newArray);
         freeArray(oldArray);
         return this;
@@ -154,7 +157,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public boolean hasMemoryAddress() {
+    public boolean hasMemoryAddress() { /* 直接内存的buffer用的，这里直接返回false，这是非池化内存，java的堆上内存 */
         return false;
     }
 
@@ -245,9 +248,13 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
-        if (src.hasMemoryAddress()) {
+        if (src.hasMemoryAddress()) {  /* 直接内存的buffer用的，这里直接返回false，这是非池化内存，java的堆上内存 */
             PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, array, index, length);
-        } else  if (src.hasArray()) {
+        } else  if (src.hasArray()) { /* 堆上就是用的一个简单的数组 */
+            /*
+             * 就是在本数组中，把（readerIndex--writeIndex）内容前移，
+             * 已经读过的（0--readerIndex）覆盖掉
+             * */
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
@@ -258,6 +265,10 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.length);
+        /*
+        * 就是在本数组中，把（readerIndex--writeIndex）内容前移，
+        * 已经读过的（0--readerIndex）覆盖掉
+        * */
         System.arraycopy(src, srcIndex, array, index, length);
         return this;
     }

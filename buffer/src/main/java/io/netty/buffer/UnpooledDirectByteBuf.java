@@ -61,6 +61,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = alloc;
+        /*
+        * allocateDirect()  调用 JDK Unsafe直接分配直接内存
+        * */
         setByteBuffer(allocateDirect(initialCapacity), false);
     }
 
@@ -122,7 +125,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
                 }
             }
         }
-
+        /*
+        * 第一次分配直接内存的时候，tryFree 为 false
+        * */
         this.buffer = buffer;
         tmpNioBuf = null;
         capacity = buffer.remaining();
@@ -140,6 +145,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
+        /*
+        * 接内存新申请一块，NIO 的 ByteBuffer 的复制操作 （put），修改引用
+        * */
         checkNewCapacity(newCapacity);
         int oldCapacity = capacity;
         if (newCapacity == oldCapacity) {
@@ -449,6 +457,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.length);
+        /* 复制了一个新的直接内存缓冲区，往新复制的数组里边设置 */
         ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);
@@ -622,6 +631,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     private ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
+            /*
+            * TODO 为什么要赋值一份呢？
+            * */
             this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
         }
         return tmpNioBuf;

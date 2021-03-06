@@ -42,7 +42,7 @@ import java.util.Set;
  * @see ThreadLocal
  */
 public class FastThreadLocal<V> {
-
+    /* 其实跟ThreadLocal没什么两样，无非ThreadLocal中每次get都要根据key计算hash值，作者以为这种方式太慢了，然后新搞了一个fastThreadLocal，把index值存起来而已 */
     private static final int variablesToRemoveIndex = InternalThreadLocalMap.nextVariableIndex();
 
     /**
@@ -121,7 +121,7 @@ public class FastThreadLocal<V> {
         Set<FastThreadLocal<?>> variablesToRemove = (Set<FastThreadLocal<?>>) v;
         variablesToRemove.remove(variable);
     }
-
+    /* 把 index 保存下来的变量 */
     private final int index;
 
     public FastThreadLocal() {
@@ -133,12 +133,14 @@ public class FastThreadLocal<V> {
      */
     @SuppressWarnings("unchecked")
     public final V get() {
+        /* 这里会如果没有 InternalThreadLocalMap 会高出一个新的，
+         * 里边存储变量用 indexedVariables，初始化一个全 new Object的数组 */
         InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
         Object v = threadLocalMap.indexedVariable(index);
         if (v != InternalThreadLocalMap.UNSET) {
             return (V) v;
         }
-
+        /* 往 indexedVariables 设置 给当前线程在当前arena中申请到的 私有缓存区域 */
         return initialize(threadLocalMap);
     }
 

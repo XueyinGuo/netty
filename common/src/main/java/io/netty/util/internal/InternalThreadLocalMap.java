@@ -99,6 +99,9 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         if (thread instanceof FastThreadLocalThread) {
             return fastGet((FastThreadLocalThread) thread);
         } else {
+            /* 不是EventLoop线程（FastThreadLocalThread），而是普通的线程（Thread）
+            * 这里会如果没有 InternalThreadLocalMap 会高出一个新的，
+            * 里边存储变量用indexedVariables，初始化一个全 new Object的数组 */
             return slowGet();
         }
     }
@@ -112,8 +115,9 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     private static InternalThreadLocalMap slowGet() {
+        /* ThreadLocal.get */
         InternalThreadLocalMap ret = slowThreadLocalMap.get();
-        if (ret == null) {
+        if (ret == null) {/* 搞一个新的，ThreadLocal */
             ret = new InternalThreadLocalMap();
             slowThreadLocalMap.set(ret);
         }

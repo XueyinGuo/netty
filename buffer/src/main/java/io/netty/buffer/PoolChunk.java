@@ -190,12 +190,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
         this.chunkSize = chunkSize;
         this.offset = offset;
         freeBytes = chunkSize;
-
+        /* chunk最小的为subPage，次之的为page，run用来管理好几个page，用来分配比一个page大，但是不够整个chunk的大小 */
         runsAvail = newRunsAvailqueueArray(maxPageIdx);
         runsAvailMap = new LongLongHashMap(-1);
         subpages = new PoolSubpage[chunkSize >> pageShifts];
 
         //insert initial run, offset = 0, pages = chunkSize / pageSize
+        /*
+        * 0--page总数搞成一个run，初始化“位图”【initHandle】
+        * */
         int pages = chunkSize >> pageShifts;
         long initHandle = (long) pages << SIZE_SHIFT;
         insertAvailRun(0, pages, initHandle);
@@ -296,6 +299,17 @@ final class PoolChunk<T> implements PoolChunkMetric {
         final long handle;
         if (sizeIdx <= arena.smallMaxSizeIdx) {
             // small
+            /*
+            * 需要的内存比较小，分配一个subPage就够了
+            * 1.找到合适的 run
+            *       1.1 如果run足够大，就从run中切除一块，剩下的还可以留着下次再用
+
+            * 2.用刚刚切下来的内存块新建一个subPage内存加到subpagePool链表中
+            *       每次一开始进行分配的时候，整个page就直接分成了第一次申请的大小，比如第一次申请64字节，8192就平分成128份
+                    用两个long就可以表示整个区域的使用情况，所以现在有了128块 64字节的内存
+
+            * 3.进行分配，直接从池子中拿
+            * */
             handle = allocateSubpage(sizeIdx);
             if (handle < 0) {
                 return false;
@@ -322,20 +336,30 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
         synchronized (runsAvail) {
             //find first queue which has at least one big enough run
+            /*
+            * 找到一个可以分配足够空间的 run
+            * */
             int queueIdx = runFirstBestFit(pageIdx);
             if (queueIdx == -1) {
                 return -1;
             }
 
             //get run with min offset in this queue
+            /* LongPriorityQueue 是所有 run 的集合 */
             LongPriorityQueue queue = runsAvail[queueIdx];
+            /*
+            * 获取到记录这个run可用空间的【位变量】
+            * */
             long handle = queue.poll();
 
             assert handle != LongPriorityQueue.NO_VALUE && !isUsed(handle) : "invalid handle: " + handle;
-
+            /* runsAvailMap 存着 每个run的起始page 和 终止page
+            * 先从这个“map”中移除关于本run的起始和终止page信息  */
             removeAvailRun(queue, handle);
 
             if (handle != -1) {
+                /* 如果一个run足够大，这次分完还剩很多
+                * 将这一块内存进行切分，剩余空闲的内存继续存储到ranAvail和runsAvailMap中 */
                 handle = splitLargeRun(handle, pages);
             }
 
@@ -384,7 +408,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private long splitLargeRun(long handle, int needPages) {
         assert needPages > 0;
-
+        /* 将这一块内存进行切分，剩余空闲的内存继续存储到ranAvail和runsAvailMap中 */
         int totalPages = runPages(handle);
         assert needPages <= totalPages;
 
@@ -421,8 +445,18 @@ final class PoolChunk<T> implements PoolChunkMetric {
         PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
         synchronized (head) {
             //allocate a new run
+            /*
+            * 一个 run 是一些 page 的集合，run可以用来分配比page大的内存
+            * */
             int runSize = calculateRunSize(sizeIdx);
             //runSize must be multiples of pageSize
+            /*
+            * 从构造方法可知：初始时整个chunk就是一个run，从0--2048页
+            * TODO 验证！！！【但是随着程序的运行，有的区域先释放，有的区域仍然持有，导致不连续越来越多】
+            * TODO 【虽然分配的时候使用伙伴算法，但是仍然由于不同内存释放时间不同导致run的分裂？？？】
+            * 找到一个合适的 run
+            * TODO 验证！！！ 至少切一页下来吗？
+            * */
             long runHandle = allocateRun(runSize);
             if (runHandle < 0) {
                 return -1;
@@ -431,11 +465,20 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int runOffset = runOffset(runHandle);
             assert subpages[runOffset] == null;
             int elemSize = arena.sizeIdx2size(sizeIdx);
-
+            /*
+             * 新申请的subPage内存加到subpagePool链表中
+             *
+             * 每次一开始进行分配的时候，整个page就直接分成了第一次申请的大小，比如第一次申请64字节，8192就平分成128份
+             * 用两个long就可以表示整个区域的使用情况，所以现在有了128块 64字节的内存
+             * */
             PoolSubpage<T> subpage = new PoolSubpage<T>(head, this, pageShifts, runOffset,
                                runSize(pageShifts, runHandle), elemSize);
 
             subpages[runOffset] = subpage;
+            /*
+            * 把128块加到池子中
+            * 进行分配，直接从池子中拿
+            * */
             return subpage.allocate();
         }
     }
@@ -570,6 +613,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         assert reqCapacity <= s.elemSize;
 
         buf.init(this, nioBuffer, handle,
+                 /* 起始位置 */
                  (runOffset << pageShifts) + bitmapIdx * s.elemSize + offset,
                  reqCapacity, s.elemSize, threadCache);
     }

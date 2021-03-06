@@ -180,7 +180,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        if (initialCapacity == 0 && maxCapacity == 0) {
+        if (initialCapacity == 0 && maxCapacity == 0) { /* 如果init和max为0，直接返回空buffer */
             return emptyBuf;
         }
         validate(initialCapacity, maxCapacity);

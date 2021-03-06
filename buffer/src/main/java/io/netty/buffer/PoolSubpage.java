@@ -59,9 +59,18 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         this.runOffset = runOffset;
         this.runSize = runSize;
         this.elemSize = elemSize;
+        /*
+        * page管理subPage使用bitmap管理的，虽说是bitmap，
+        * 但还是形式使用long数组的形式，每页8192B，
+        * 假设每个subPage为64字节，则需要两个long,2*64*64=8192
+        */
         bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
         doNotDestroy = true;
+        /*
+        * 每次一开始进行分配的时候，整个page就直接分成了第一次申请的大小，比如第一次申请64字节，8192就平分成128份
+        * 用两个long就可以表示整个区域的使用情况
+        * */
         if (elemSize != 0) {
             maxNumElems = numAvail = runSize / elemSize;
             nextAvail = 0;
@@ -74,6 +83,9 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
                 bitmap[i] = 0;
             }
         }
+        /*
+        * 新申请的subPage内存加到subpagePool链表中
+        * */
         addToPool(head);
     }
 

@@ -71,12 +71,17 @@ final class PoolThreadCache {
         this.heapArena = heapArena;
         this.directArena = directArena;
         if (directArena != null) {
+            /*
+             * 在arena中创建每个线程的缓存区，每次分配都优先使用这里的分配空间
+             * */
             smallSubPageDirectCaches = createSubPageCaches(
                     smallCacheSize, directArena.numSmallSubpagePools);
 
             normalDirectCaches = createNormalCaches(
                     normalCacheSize, maxCachedBufferCapacity, directArena);
-
+            /*
+            * 分配成功表示此arena已经有一个线程在使用了，线程数+1
+            * */
             directArena.numThreadCaches.getAndIncrement();
         } else {
             // No directArea is configured so just null out all caches
@@ -109,6 +114,9 @@ final class PoolThreadCache {
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
             int cacheSize, int numCaches) {
+        /*
+        * 在arena中创建每个线程的缓存区，每次分配都优先使用这里的分配空间
+        * */
         if (cacheSize > 0 && numCaches > 0) {
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
@@ -279,6 +287,7 @@ final class PoolThreadCache {
 
     private MemoryRegionCache<?> cacheForSmall(PoolArena<?> area, int sizeIdx) {
         if (area.isDirect()) {
+            /* 获取一块缓存，先根据初始容量分配，所以暂时返回了一块256大小的 */
             return cache(smallSubPageDirectCaches, sizeIdx);
         }
         return cache(smallSubPageHeapCaches, sizeIdx);
@@ -369,6 +378,9 @@ final class PoolThreadCache {
          * Allocate something out of the cache if possible and remove the entry from the cache.
          */
         public final boolean allocate(PooledByteBuf<T> buf, int reqCapacity, PoolThreadCache threadCache) {
+            /*
+            * 获取到一块缓存之后，判断
+            * */
             Entry<T> entry = queue.poll();
             if (entry == null) {
                 return false;

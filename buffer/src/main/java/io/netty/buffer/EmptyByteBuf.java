@@ -47,12 +47,12 @@ public final class EmptyByteBuf extends ByteBuf {
         long emptyByteBufferAddress = 0;
         try {
             if (PlatformDependent.hasUnsafe()) {
-                emptyByteBufferAddress = PlatformDependent.directBufferAddress(EMPTY_BYTE_BUFFER);
+                emptyByteBufferAddress = PlatformDependent.directBufferAddress(EMPTY_BYTE_BUFFER); /* 获取直接内存的地址 */
             }
         } catch (Throwable t) {
             // Ignore
         }
-        EMPTY_BYTE_BUFFER_ADDRESS = emptyByteBufferAddress;
+        EMPTY_BYTE_BUFFER_ADDRESS = emptyByteBufferAddress; /* 两个对象指向同一块地址 */
     }
 
     private final ByteBufAllocator alloc;

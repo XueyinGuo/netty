@@ -75,6 +75,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     private int maxCapacity;
 
     protected AbstractByteBuf(int maxCapacity) {
+        /* 只是检查数字的合法与否  >0 就行 */
         checkPositiveOrZero(maxCapacity, "maxCapacity");
         this.maxCapacity = maxCapacity;
     }
@@ -220,11 +221,22 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         if (readerIndex != writerIndex) {
+            /*
+             * 就是在本数组中，把（readerIndex--writeIndex）内容前移，
+             * 已经读过的（0--readerIndex）覆盖掉
+             * */
             setBytes(0, this, readerIndex, writerIndex - readerIndex);
             writerIndex -= readerIndex;
+            /*
+             * reset 标记位设置
+             * */
             adjustMarkers(readerIndex);
             readerIndex = 0;
         } else {
+            /*
+            * readerIndex == writerIndex
+            * 已经读空了，无数据可读了
+            * */
             ensureAccessible();
             adjustMarkers(readerIndex);
             writerIndex = readerIndex = 0;
@@ -255,6 +267,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected final void adjustMarkers(int decrement) {
+        /*
+        * reset 标记位设置， decrement 为前移的大小
+        * */
         if (markedReaderIndex <= decrement) {
             markedReaderIndex = 0;
             if (markedWriterIndex <= decrement) {
@@ -277,6 +292,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
+        /*
+         * 扩容策略：
+         * 1. 数组长度不够64字节，直接变成64字节
+         * 2. 不够 4MB，直接翻倍
+         * 3. 超过 4MB， 每次增加 4MB
+         * */
         ensureWritable0(checkPositiveOrZero(minWritableBytes, "minWritableBytes"));
         return this;
     }
@@ -299,9 +320,19 @@ public abstract class AbstractByteBuf extends ByteBuf {
         // Normalize the target capacity to the power of 2.
         final int fastWritable = maxFastWritableBytes();
         int newCapacity = fastWritable >= minWritableBytes ? writerIndex + fastWritable
+                /*
+                * 扩容策略：
+                * 1. 数组长度不够64字节，直接变成64字节
+                * 2. 不够 4MB，直接翻倍
+                * 3. 超过 4MB， 每次增加 4MB
+                * */
                 : alloc().calculateNewCapacity(targetCapacity, maxCapacity);
 
         // Adjust to the new capacity.
+        /*
+        * 1. 堆内存数组：新创建一个数组，进行copy，把array的引用指向新扩容后的数组
+        * 2. 直接内存新申请一块，NIO 的 ByteBuffer 的复制操作 （put），修改引用
+        *  */
         capacity(newCapacity);
     }
 
@@ -892,6 +923,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
+        /* 1. 检查 目标数组的长度 是否大于0
+        * 2. 检查目前可读的长度（writerIndex）是否大于目标数组长度 */
         checkReadableBytes(length);
         getBytes(readerIndex, dst, dstIndex, length);
         readerIndex += length;
@@ -1084,6 +1117,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuf src) {
+        /* 1. 进行扩容操作
+         * 2. 从src拷贝数组到dst  */
         writeBytes(src, src.readableBytes());
         return this;
     }
@@ -1093,6 +1128,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (checkBounds) {
             checkReadableBounds(src, length);
         }
+        /* 1. 进行扩容操作
+                扩容策略：
+                1. 数组长度不够64字节，直接变成64字节
+                2. 不够 4MB，直接翻倍
+                3. 超过 4MB， 每次增加 4MB
+
+        * 2. 从src拷贝数组到dst  */
         writeBytes(src, src.readerIndex(), length);
         src.readerIndex(src.readerIndex() + length);
         return this;
@@ -1100,7 +1142,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+        /* 进行扩容操作 */
         ensureWritable(length);
+        /* 拷贝数组 */
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
         return this;
