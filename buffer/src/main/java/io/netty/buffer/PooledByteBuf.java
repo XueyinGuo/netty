@@ -48,7 +48,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
               long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
-        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
+        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache); /* 一系列的初始化，创建一个 PooledByteBuf */
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
@@ -59,9 +59,9 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
                        long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
         assert chunk != null;
-
+        /* 一系列的初始化，创建一个 PooledByteBuf */
         this.chunk = chunk;
-        memory = chunk.memory;
+        memory = chunk.memory; /* memory 就是一整块java.nio.ByteBuffer【整个chunk就是一个16M大的ByteBuffer】 */
         tmpNioBuf = nioBuffer;
         allocator = chunk.arena.parent;
         this.cache = cache;

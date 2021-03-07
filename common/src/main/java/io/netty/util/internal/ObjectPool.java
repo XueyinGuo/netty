@@ -74,9 +74,9 @@ public abstract class ObjectPool<T> {
              recycler = new Recycler<T>() {
                 @Override
                 protected T newObject(Handle<T> handle) {
-                    return creator.newObject(handle);
+                    return creator.newObject(handle); /* PooledUnsafeDirectByteBuf类中的匿名内部类RECYCLER 新建一个 PooledUnsafeDirectByteBuf对象 */
                 }
-            };
+            };                                        /* MemoryRegionCache 类中的RECYCLER 新建一个 Entry */
         }
 
         @Override

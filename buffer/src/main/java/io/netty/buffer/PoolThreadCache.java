@@ -188,7 +188,7 @@ final class PoolThreadCache {
     boolean add(PoolArena<?> area, PoolChunk chunk, ByteBuffer nioBuffer,
                 long handle, int normCapacity, SizeClass sizeClass) {
         int sizeIdx = area.size2SizeIdx(normCapacity);
-        MemoryRegionCache<?> cache = cache(area, sizeIdx, sizeClass);
+        MemoryRegionCache<?> cache = cache(area, sizeIdx, sizeClass); /* 获取合适的缓存槽位置 */
         if (cache == null) {
             return false;
         }
@@ -287,7 +287,7 @@ final class PoolThreadCache {
 
     private MemoryRegionCache<?> cacheForSmall(PoolArena<?> area, int sizeIdx) {
         if (area.isDirect()) {
-            /* 获取一块缓存，先根据初始容量分配，所以暂时返回了一块256大小的 */
+            /* 获取合适的缓存槽位置 */
             return cache(smallSubPageDirectCaches, sizeIdx);
         }
         return cache(smallSubPageHeapCaches, sizeIdx);
@@ -368,7 +368,7 @@ final class PoolThreadCache {
             boolean queued = queue.offer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
-                entry.recycle();
+                entry.recycle(); /* 如果没能在线程缓存队列中存放该区域，则应该立马回收 */
             }
 
             return queued;
@@ -441,7 +441,7 @@ final class PoolThreadCache {
 
             chunk.arena.freeChunk(chunk, handle, entry.normCapacity, sizeClass, nioBuffer, finalizer);
         }
-
+        /* MemoryRegionCache中的stack中存入新创建的 Entry */
         static final class Entry<T> {
             final Handle<Entry<?>> recyclerHandle;
             PoolChunk<T> chunk;

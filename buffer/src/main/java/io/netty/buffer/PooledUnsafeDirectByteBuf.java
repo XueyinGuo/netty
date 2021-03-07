@@ -53,8 +53,8 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     void init(PoolChunk<ByteBuffer> chunk, ByteBuffer nioBuffer,
               long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
-        super.init(chunk, nioBuffer, handle, offset, length, maxLength, cache);
-        initMemoryAddress();
+        super.init(chunk, nioBuffer, handle, offset, length, maxLength, cache); /* 一系列的初始化，创建一个 PooledByteBuf */
+        initMemoryAddress(); /* 存储这个subPage的起始地址 */
     }
 
     @Override

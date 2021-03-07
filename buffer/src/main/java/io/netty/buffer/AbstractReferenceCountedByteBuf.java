@@ -97,7 +97,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     @Override
     public boolean release() {
-        return handleRelease(updater.release(this));
+        return handleRelease(updater.release(this));/* 获取到引用计数的偏移量，用CAS替换引用计数为 n-1 */
     }
 
     @Override

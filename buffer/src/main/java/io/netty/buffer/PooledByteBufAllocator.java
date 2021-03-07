@@ -400,7 +400,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
                     new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
         }
-
+        /* 以 1/128 的概率检测内存泄漏问题 */
         return toLeakAwareBuffer(buf);
     }
 

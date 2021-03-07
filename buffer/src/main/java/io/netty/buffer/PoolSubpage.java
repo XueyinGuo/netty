@@ -102,11 +102,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) == 0;
         bitmap[q] |= 1L << r;
-
+        /* 当前页中还已经没有剩余空间了，从池子中移除，下次申请的时候再去run中切，切好继续放到池子中 */
         if (-- numAvail == 0) {
             removeFromPool();
         }
-
+        /* 每个page用long数组表示可用空间起始位置，返回一个long */
         return toHandle(bitmapIdx);
     }
 

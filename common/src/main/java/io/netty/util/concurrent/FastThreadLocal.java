@@ -42,7 +42,10 @@ import java.util.Set;
  * @see ThreadLocal
  */
 public class FastThreadLocal<V> {
-    /* 其实跟ThreadLocal没什么两样，无非ThreadLocal中每次get都要根据key计算hash值，作者以为这种方式太慢了，然后新搞了一个fastThreadLocal，把index值存起来而已 */
+    /*
+    * 其实跟ThreadLocal没什么两样，无非ThreadLocal中每次get都要根据key计算hash值，
+    * 作者以为这种方式太慢了，然后新搞了一个fastThreadLocal，把index值存起来而已
+    * */
     private static final int variablesToRemoveIndex = InternalThreadLocalMap.nextVariableIndex();
 
     /**

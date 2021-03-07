@@ -133,6 +133,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     }
 
     public final boolean release(T instance) {
+        /* 获取到引用计数的偏移量，用CAS替换引用计数为 n-1 */
         int rawCnt = nonVolatileRawCnt(instance);
         return rawCnt == 2 ? tryFinalRelease0(instance, 2) || retryRelease0(instance, 1)
                 : nonFinalRelease0(instance, 1, rawCnt, toLiveRealRefCnt(rawCnt, 1));

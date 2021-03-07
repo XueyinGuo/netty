@@ -309,6 +309,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
                     用两个long就可以表示整个区域的使用情况，所以现在有了128块 64字节的内存
 
             * 3.进行分配，直接从池子中拿
+            *
             * */
             handle = allocateSubpage(sizeIdx);
             if (handle < 0) {
@@ -326,6 +327,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         ByteBuffer nioBuffer = cachedNioBuffers != null? cachedNioBuffers.pollLast() : null;
+        /* 一系列的初始化，创建一个 PooledByteBuf对象，存储这个subPage的起始地址 */
         initBuf(buf, nioBuffer, handle, reqCapacity, cache);
         return true;
     }
@@ -455,7 +457,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
             * TODO 验证！！！【但是随着程序的运行，有的区域先释放，有的区域仍然持有，导致不连续越来越多】
             * TODO 【虽然分配的时候使用伙伴算法，但是仍然由于不同内存释放时间不同导致run的分裂？？？】
             * 找到一个合适的 run
-            * TODO 验证！！！ 至少切一页下来吗？
             * */
             long runHandle = allocateRun(runSize);
             if (runHandle < 0) {
@@ -599,6 +600,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             buf.init(this, nioBuffer, handle, runOffset(handle) << pageShifts,
                      reqCapacity, runSize(pageShifts, handle), arena.parent.threadCache());
         } else {
+            /* 一系列的初始化，创建一个 PooledByteBuf对象，存储这个subPage的起始地址 */
             initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
         }
     }
@@ -611,7 +613,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         PoolSubpage<T> s = subpages[runOffset];
         assert s.doNotDestroy;
         assert reqCapacity <= s.elemSize;
-
+        /* 一系列的初始化，创建一个 PooledByteBuf对象，存储这个subPage的起始地址 */
         buf.init(this, nioBuffer, handle,
                  /* 起始位置 */
                  (runOffset << pageShifts) + bitmapIdx * s.elemSize + offset,

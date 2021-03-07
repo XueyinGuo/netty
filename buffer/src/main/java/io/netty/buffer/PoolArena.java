@@ -169,7 +169,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
     private void tcacheAllocateSmall(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity,
                                      final int sizeIdx) {
-
+        /* 从线程的缓存中就已经分配完了的话，直接返回 */
         if (cache.allocateSmall(this, buf, reqCapacity, sizeIdx)) {
             // was able to allocate out of the cache so move on
             return;
@@ -179,9 +179,19 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
          * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
          * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
          */
+        /*
+        * 找到当前分配大小最合适的subPage链表的表头
+        * */
         final PoolSubpage<T> head = smallSubpagePools[sizeIdx];
         final boolean needsNormalAllocation;
         synchronized (head) {
+            /*
+            * 判断当前chunk中的subPage链表中有没有已经划分好的subPage
+            * 如果head.next还是自己，那么表示没有合适的subPage，就需要去run中切一页，划分subPage
+            * 然后加到链表中
+            * 第一次进来的时候肯定没有，所以命中下边的语句 if (needsNormalAllocation)
+            * 第二次在分配同样大小的时候就可以从第一次切出来的区域中分配了 if (!needsNormalAllocation)
+            * */
             final PoolSubpage<T> s = head.next;
             needsNormalAllocation = s == head;
             if (!needsNormalAllocation) {
@@ -200,6 +210,21 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
         if (needsNormalAllocation) {
             synchronized (this) {
+                /*
+                 * 0.如果在所有的队列中找不到合适的分配区域，就需要重新创建一个chunk，
+                 *
+                 * 需要的内存比较小，分配一个subPage就够了
+                 * 1.找到合适的 run
+                 *       1.1 如果run足够大，就从run中切除一块，剩下的还可以留着下次再用
+
+                 * 2.用刚刚切下来的内存块新建一个subPage内存加到subpagePool链表中
+                 *       每次一开始进行分配的时候，整个page就直接分成了第一次申请的大小，比如第一次申请64字节，8192就平分成128份
+                         用两个long就可以表示整个区域的使用情况，所以现在有了128块 64字节的内存
+
+                 * 3.进行分配，直接从池子中拿
+                 * 4.一系列的初始化，创建一个 PooledByteBuf对象，存储这个subPage的起始地址
+                 * 5.每次新建的chunk都新加到 qInit 中
+                 * */
                 allocateNormal(buf, reqCapacity, sizeIdx, cache);
             }
         }
@@ -231,8 +256,23 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         /* 所有的 q 都为 none，或者所有的q都分配不下，就需要新创建一个chunk */
         // Add a new chunk.
         PoolChunk<T> c = newChunk(pageSize, nPSizes, pageShifts, chunkSize);
+         /*
+         * 需要的内存比较小，分配一个subPage就够了
+         * 1.找到合适的 run
+         *       1.1 如果run足够大，就从run中切除一块，剩下的还可以留着下次再用
+
+         * 2.用刚刚切下来的内存块新建一个subPage内存加到subpagePool链表中
+         *       每次一开始进行分配的时候，整个page就直接分成了第一次申请的大小，比如第一次申请64字节，8192就平分成128份
+                 用两个long就可以表示整个区域的使用情况，所以现在有了128块 64字节的内存
+
+         * 3.进行分配，直接从池子中拿
+         * 4.一系列的初始化，创建一个 PooledByteBuf对象，存储这个subPage的起始地址
+         * */
         boolean success = c.allocate(buf, reqCapacity, sizeIdx, threadCache);
         assert success;
+        /*
+        * 每次新建的chunk都新加到 qInit 中
+        * */
         qInit.add(c);
     }
 
@@ -685,7 +725,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (HAS_UNSAFE) { /* 通过回收器拿到一个之前用过的buf，然后把所有值设置为默认 */
+            if (HAS_UNSAFE) { /* 通过回收器拿到一个之前用过的buf，然后把所有值设置为默认，回收器中没有任何东西就新建一个 */
                 return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
             } else {
                 return PooledDirectByteBuf.newInstance(maxCapacity);
