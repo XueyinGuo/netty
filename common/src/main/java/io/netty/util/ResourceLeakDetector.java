@@ -291,12 +291,21 @@ public class ResourceLeakDetector<T> {
         }
 
         // Detect and report previous leaks.
+        /*
+        * 获取引用队列中的弱引用
+        * */
         for (;;) {
+            /*
+            * 经过 GC 之后，指向 ByteBuf 的 弱引用回收之后会被放入这个 弱引用队列 refQueue
+            * *//** {@link example.com.szu.learn02_bute_buf.L08_ByteBuf_Leak_Detect } */
             DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
             }
-
+            /*
+            * 如果上一步中 从引用队列中弹出一个 被回收的对象
+            * 切断所有引用之后
+            * */
             if (!ref.dispose()) {
                 continue;
             }
@@ -450,6 +459,12 @@ public class ResourceLeakDetector<T> {
 
         boolean dispose() {
             clear();
+            /*
+            * 上一步切除了 弱引用的 reference
+            *
+            * 这个 set 的 key 是同一个弱引用，
+            * 此时 remove 一个 null 的时候自然会 返回 false
+            * */
             return allLeaks.remove(this);
         }
 

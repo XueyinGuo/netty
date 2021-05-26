@@ -42,7 +42,7 @@ public class L07_PooledDirectBuffer_Recycler {
                 *  【为了控制队列的缓慢增长】  */
                 /* TODO 但是那些没有回收的东西，一直存在在队列中会导致内存泄漏吗？
                 *   其他线程创建的队列放到 WeakHashMap 中，其中 stack 是虚引用，队列是强引用 WeakHashMap<Stack<?>, WeakOrderQueue>
-                *   也就是说，当 持有 stack强引用的那个线程死了，这个stack就被回收了，key没了，value还没看见显示的清楚，队列中的东西岂不是访问不到了吗？
+                *   也就是说，当 持有 stack强引用的那个线程死了，这个stack就被回收了，key没了，value还没看见显示的清除，队列中的东西岂不是访问不到了吗？
                 * 往自己队列中搬东西的时候，条件满足则执行cursor.reclaimAllSpaceAndUnlink()，释放本线程中存在的已经死亡的线程的队列 */
                 CyclerA cyclerA = CA.get();
                 container.add(cyclerA);
